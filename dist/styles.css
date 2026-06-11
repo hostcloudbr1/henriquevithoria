@@ -534,6 +534,18 @@ h2 em { color: #a164cf; font-weight: 400; }
   font: 400 18px var(--display);
   resize: vertical;
 }
+.memory-form input[type="email"], .memory-form input[type="password"] {
+  width: 100%;
+  padding: 14px 0;
+  border: 0;
+  border-bottom: 1px solid rgba(51, 32, 58, .25);
+  outline: none;
+  background: transparent;
+  color: #211924;
+  font: 400 18px var(--display);
+}
+.auth-form h3 { margin: 0 0 12px; font: 500 38px/1 var(--display); }
+.auth-form > p:not(.eyebrow) { margin: 0 0 30px; color: #716875; font: 400 16px/1.55 var(--display); }
 .memory-form input:focus, .memory-form textarea:focus { border-color: #773299; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
 .file-label input { position: absolute; width: 1px; height: 1px; opacity: 0; }

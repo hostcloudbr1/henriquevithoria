@@ -13,4 +13,4 @@
 
 Use apenas a chave pública `publishable` ou `anon`. Nunca publique a chave `service_role`.
 
-Depois do primeiro login, a lembrança que já estava salva no navegador será migrada automaticamente para o Supabase.
+Depois do primeiro login, a lembrança que já estava salva no navegador será migrada automaticamente para o Supabase. As fotos são comprimidas e armazenadas junto da lembrança na tabela; não é necessário configurar o Storage.

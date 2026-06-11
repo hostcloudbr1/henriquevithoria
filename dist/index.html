@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#08050d">
   <meta name="description" content="O nosso cantinho: memórias, amor e a história de Carlos Henrique e Vithoria.">
   <title>Henrique & Vithoria | Nosso infinito</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -185,10 +185,26 @@
         <div class="memory-actions">
           <button class="text-button" id="exportButton" type="button">Baixar nossas memórias</button>
           <label class="text-button" for="importInput">Restaurar memórias</label>
+          <button class="text-button" id="logoutButton" type="button" hidden>Sair</button>
           <input id="importInput" type="file" accept="application/json" hidden>
         </div>
       </div>
-      <form class="memory-form reveal" id="memoryForm">
+      <form class="memory-form auth-form reveal" id="authForm">
+        <p class="eyebrow">Nosso acesso</p>
+        <h3>Entre no cantinho de vocês</h3>
+        <p>Use uma das duas contas criadas no Supabase para ver e guardar as memórias.</p>
+        <label>
+          <span>E-mail</span>
+          <input id="authEmail" type="email" autocomplete="email" required>
+        </label>
+        <label>
+          <span>Senha</span>
+          <input id="authPassword" type="password" autocomplete="current-password" minlength="6" required>
+        </label>
+        <button class="primary-button" type="submit">Entrar no nosso cantinho <span>→</span></button>
+        <p class="form-note" id="authStatus"></p>
+      </form>
+      <form class="memory-form reveal" id="memoryForm" hidden>
         <label>
           <span>Título da memória</span>
           <input id="memoryTitle" name="title" type="text" maxlength="80" placeholder="Ex.: A chamada que salvou meu dia" required>
@@ -209,7 +225,7 @@
           </label>
         </div>
         <button class="primary-button" type="submit">Guardar no nosso cantinho <span>→</span></button>
-        <p class="form-note">As novas memórias ficam salvas somente neste navegador. Use o botão de baixar para guardar uma cópia.</p>
+        <p class="form-note" id="storageStatus">Conectando ao nosso banco de memórias...</p>
       </form>
     </section>
 
@@ -242,6 +258,8 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js?v=4"></script>
+  <script src="script.js?v=4"></script>
 </body>
 </html>

@@ -37,3 +37,5 @@ O formulário usa Supabase para sincronizar textos e fotos entre os aparelhos.
 6. Envie os arquivos atualizados ao GitHub e faça o redeploy na Vercel.
 
 Nunca coloque a chave `service_role` no site. Use somente a chave pública `publishable` ou `anon`.
+
+As fotos são comprimidas antes do envio e armazenadas na própria tabela `memories`; não é necessário criar um bucket no Supabase Storage.

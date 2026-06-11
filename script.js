@@ -1,7 +1,6 @@
 const RELATIONSHIP_START = new Date(2026, 5, 5, 0, 0, 0);
 const STORAGE_KEY = "henrique-vithoria-memories-v1";
 const MIGRATION_KEY = "henrique-vithoria-supabase-migrated-v1";
-const MEMORY_BUCKET = "memory-images";
 let supabaseClient = null;
 let currentUserId = null;
 let remoteMemories = [];
@@ -258,7 +257,7 @@ async function initializeSupabase() {
     renderSavedMemories();
     setStorageStatus("Configure o Supabase para sincronizar as memórias entre celulares.", true);
     $("#authForm").hidden = true;
-    $("#memoryForm").hidden = false;
+    $("#memoryForm").hidden = true;
     return;
   }
 
@@ -276,9 +275,11 @@ async function initializeSupabase() {
     console.error("Supabase:", error);
     supabaseClient = null;
     currentUserId = null;
-    remoteMemories = loadLocalMemories();
+    remoteMemories = [];
     renderSavedMemories();
-    setStorageStatus("Não foi possível conectar ao Supabase. Confira a configuração e o SQL.", true);
+    $("#authForm").hidden = false;
+    $("#memoryForm").hidden = true;
+    setStorageStatus("Banco desconectado. Nada será salvo apenas neste navegador.", true);
   }
 }
 
@@ -346,51 +347,21 @@ async function fetchMemories() {
     .order("memory_date", { ascending: false })
     .order("created_at", { ascending: false });
   if (error) throw error;
-  remoteMemories = await Promise.all((data || []).map(async (memory) => {
-    if (!memory.image_path) return memory;
-    const { data: signedData, error: signedError } = await supabaseClient.storage
-      .from(MEMORY_BUCKET)
-      .createSignedUrl(memory.image_path, 3600);
-    return {
-      ...memory,
-      display_image_url: signedError ? "" : signedData.signedUrl
-    };
-  }));
+  remoteMemories = data || [];
   renderSavedMemories();
-}
-
-function dataUrlToBlob(dataUrl) {
-  return fetch(dataUrl).then((response) => response.blob());
-}
-
-async function uploadMemoryImage(blob, originalName = "memoria.jpg") {
-  if (!blob) return { imageUrl: "", imagePath: "" };
-  const extension = originalName.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-  const imagePath = `${currentUserId}/${crypto.randomUUID()}.${extension === "jpeg" ? "jpg" : extension}`;
-  const { error } = await supabaseClient.storage
-    .from(MEMORY_BUCKET)
-    .upload(imagePath, blob, { contentType: blob.type || "image/jpeg", upsert: false });
-  if (error) throw error;
-  return { imageUrl: "", imagePath };
 }
 
 async function migrateLocalMemories() {
   if (localStorage.getItem(MIGRATION_KEY) === "done") return;
   const localMemories = loadLocalMemories();
   for (const memory of localMemories) {
-    let uploaded = { imageUrl: "", imagePath: "" };
-    if (memory.image?.startsWith("data:")) {
-      uploaded = await uploadMemoryImage(await dataUrlToBlob(memory.image));
-    } else if (memory.image?.startsWith("http")) {
-      uploaded.imageUrl = memory.image;
-    }
     const { error } = await supabaseClient.from("memories").insert({
       owner_id: currentUserId,
       title: memory.title,
       body: memory.text,
       memory_date: memory.date,
-      image_url: uploaded.imageUrl || null,
-      image_path: uploaded.imagePath || null
+      image_url: memory.image || null,
+      image_path: null
     });
     if (error) throw error;
   }
@@ -410,7 +381,7 @@ function renderSavedMemories() {
   $("#savedMemories").innerHTML = memories.map((memory) => `
     <article class="saved-card">
       ${memory.owner_id === currentUserId || !supabaseClient ? `<button class="delete-memory" data-delete="${memory.id}" type="button" aria-label="Excluir ${escapeHtml(memory.title)}">×</button>` : ""}
-      ${memory.display_image_url || memory.image_url || memory.image ? `<img src="${memory.display_image_url || memory.image_url || memory.image}" alt="">` : ""}
+      ${memory.image_url || memory.image ? `<img src="${memory.image_url || memory.image}" alt="">` : ""}
       <time>${new Date(`${memory.memory_date || memory.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</time>
       <h3>${escapeHtml(memory.title)}</h3>
       <p>${escapeHtml(memory.body || memory.text)}</p>
@@ -424,9 +395,6 @@ function renderSavedMemories() {
         if (supabaseClient) {
           const { error } = await supabaseClient.from("memories").delete().eq("id", memory.id);
           if (error) throw error;
-          if (memory.image_path) {
-            await supabaseClient.storage.from(MEMORY_BUCKET).remove([memory.image_path]);
-          }
           await fetchMemories();
         } else {
           remoteMemories = remoteMemories.filter((item) => item.id !== memory.id);
@@ -451,13 +419,13 @@ function resizeImage(file) {
       const image = new Image();
       image.onerror = reject;
       image.onload = () => {
-        const maxSize = 1200;
+        const maxSize = 900;
         const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
         const canvas = document.createElement("canvas");
         canvas.width = Math.round(image.width * scale);
         canvas.height = Math.round(image.height * scale);
         canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", .78));
+        resolve(canvas.toDataURL("image/jpeg", .68));
       };
       image.src = reader.result;
     };
@@ -482,6 +450,9 @@ function setupMemoryForm() {
     submitButton.disabled = true;
     submitButton.firstChild.textContent = "Guardando... ";
     try {
+      if (!supabaseClient || !currentUserId) {
+        throw new Error("Faça login para salvar no Supabase.");
+      }
       const imageData = await resizeImage(imageInput.files[0]);
       const memoryData = {
         title: $("#memoryTitle").value.trim(),
@@ -489,32 +460,16 @@ function setupMemoryForm() {
         date: $("#memoryDate").value
       };
 
-      if (supabaseClient && currentUserId) {
-        const uploaded = imageData
-          ? await uploadMemoryImage(await dataUrlToBlob(imageData), imageInput.files[0]?.name)
-          : { imageUrl: "", imagePath: "" };
-        const { error } = await supabaseClient.from("memories").insert({
-          owner_id: currentUserId,
-          title: memoryData.title,
-          body: memoryData.text,
-          memory_date: memoryData.date,
-          image_url: uploaded.imageUrl || null,
-          image_path: uploaded.imagePath || null
-        });
-        if (error) {
-          if (uploaded.imagePath) await supabaseClient.storage.from(MEMORY_BUCKET).remove([uploaded.imagePath]);
-          throw error;
-        }
-        await fetchMemories();
-      } else {
-        remoteMemories.unshift({
-          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-          ...memoryData,
-          image: imageData
-        });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteMemories));
-        renderSavedMemories();
-      }
+      const { error } = await supabaseClient.from("memories").insert({
+        owner_id: currentUserId,
+        title: memoryData.title,
+        body: memoryData.text,
+        memory_date: memoryData.date,
+        image_url: imageData || null,
+        image_path: null
+      });
+      if (error) throw error;
+      await fetchMemories();
 
       form.reset();
       $("#memoryDate").value = localDate();
@@ -523,7 +478,8 @@ function setupMemoryForm() {
       $("#savedMemoriesSection").scrollIntoView({ behavior: "smooth" });
       showToast("Memória guardada com carinho.");
     } catch (error) {
-      showToast("Não foi possível guardar. Tente uma imagem menor.");
+      console.error("Salvar memória:", error);
+      showToast(error.message || "Não foi possível salvar no Supabase.");
     } finally {
       submitButton.disabled = false;
       submitButton.firstChild.textContent = "Guardar no nosso cantinho ";
