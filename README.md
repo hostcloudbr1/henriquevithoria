@@ -20,8 +20,8 @@ O projeto já possui `vercel.json`. Ao importar o repositório:
 
 - Framework Preset: `Other`
 - Root Directory: deixe vazio se estes arquivos estiverem na raiz do repositório
-- Build Command: detectado automaticamente como `npm run build`
-- Output Directory: detectado automaticamente como `dist`
+- Build Command: deixe vazio
+- Output Directory: deixe vazio
 
 Depois de enviar alterações ao GitHub, faça um novo deploy na Vercel sem reutilizar o cache.
 
