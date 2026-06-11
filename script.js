@@ -1,5 +1,10 @@
 const RELATIONSHIP_START = new Date(2026, 5, 5, 0, 0, 0);
 const STORAGE_KEY = "henrique-vithoria-memories-v1";
+const MIGRATION_KEY = "henrique-vithoria-supabase-migrated-v1";
+const MEMORY_BUCKET = "memory-images";
+let supabaseClient = null;
+let currentUserId = null;
+let remoteMemories = [];
 
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
@@ -221,7 +226,7 @@ function toggleAmbientSound() {
   if (youtubeReady) youtubePlayer.playVideo();
 }
 
-function loadMemories() {
+function loadLocalMemories() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
   } catch (_) {
@@ -229,8 +234,167 @@ function loadMemories() {
   }
 }
 
-function saveMemories(memories) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
+function isSupabaseConfigured() {
+  const config = window.SUPABASE_CONFIG || {};
+  return Boolean(
+    window.supabase?.createClient &&
+    config.url?.startsWith("https://") &&
+    !config.url.includes("COLE_AQUI") &&
+    config.publishableKey &&
+    !config.publishableKey.includes("COLE_AQUI")
+  );
+}
+
+function setStorageStatus(message, isError = false) {
+  const status = $("#storageStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.style.color = isError ? "#a43d55" : "";
+}
+
+async function initializeSupabase() {
+  if (!isSupabaseConfigured()) {
+    remoteMemories = loadLocalMemories();
+    renderSavedMemories();
+    setStorageStatus("Configure o Supabase para sincronizar as memórias entre celulares.", true);
+    $("#authForm").hidden = true;
+    $("#memoryForm").hidden = false;
+    return;
+  }
+
+  const config = window.SUPABASE_CONFIG;
+  supabaseClient = window.supabase.createClient(config.url, config.publishableKey);
+
+  try {
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    await applySession(sessionData.session);
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+      setTimeout(() => applySession(session), 0);
+    });
+  } catch (error) {
+    console.error("Supabase:", error);
+    supabaseClient = null;
+    currentUserId = null;
+    remoteMemories = loadLocalMemories();
+    renderSavedMemories();
+    setStorageStatus("Não foi possível conectar ao Supabase. Confira a configuração e o SQL.", true);
+  }
+}
+
+async function applySession(session) {
+  currentUserId = session?.user?.id || null;
+  const loggedIn = Boolean(currentUserId);
+  $("#authForm").hidden = loggedIn;
+  $("#memoryForm").hidden = !loggedIn;
+  $("#logoutButton").hidden = !loggedIn;
+  $("#exportButton").hidden = !loggedIn;
+  $('label[for="importInput"]').hidden = !loggedIn;
+
+  if (!loggedIn) {
+    remoteMemories = [];
+    renderSavedMemories();
+    setStorageStatus("Entre com uma das contas de vocês para acessar as memórias.");
+    return;
+  }
+
+  try {
+    await migrateLocalMemories();
+    await fetchMemories();
+    setStorageStatus("Memórias sincronizadas com segurança entre os aparelhos de vocês.");
+  } catch (error) {
+    console.error("Sincronização:", error);
+    setStorageStatus("Login realizado, mas não foi possível carregar as memórias. Confira o SQL.", true);
+  }
+}
+
+function setupAuthentication() {
+  $("#authForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!supabaseClient) return;
+    const button = $('.primary-button', event.currentTarget);
+    button.disabled = true;
+    button.firstChild.textContent = "Entrando... ";
+    $("#authStatus").textContent = "";
+    const { error } = await supabaseClient.auth.signInWithPassword({
+      email: $("#authEmail").value.trim(),
+      password: $("#authPassword").value
+    });
+    if (error) {
+      $("#authStatus").textContent = "E-mail ou senha incorretos.";
+      button.disabled = false;
+      button.firstChild.textContent = "Entrar no nosso cantinho ";
+      return;
+    }
+    event.currentTarget.reset();
+    button.disabled = false;
+    button.firstChild.textContent = "Entrar no nosso cantinho ";
+    showToast("Bem-vindo ao cantinho de vocês.");
+  });
+
+  $("#logoutButton").addEventListener("click", async () => {
+    if (!supabaseClient) return;
+    await supabaseClient.auth.signOut();
+    showToast("Você saiu do cantinho.");
+  });
+}
+
+async function fetchMemories() {
+  const { data, error } = await supabaseClient
+    .from("memories")
+    .select("*")
+    .order("memory_date", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  remoteMemories = await Promise.all((data || []).map(async (memory) => {
+    if (!memory.image_path) return memory;
+    const { data: signedData, error: signedError } = await supabaseClient.storage
+      .from(MEMORY_BUCKET)
+      .createSignedUrl(memory.image_path, 3600);
+    return {
+      ...memory,
+      display_image_url: signedError ? "" : signedData.signedUrl
+    };
+  }));
+  renderSavedMemories();
+}
+
+function dataUrlToBlob(dataUrl) {
+  return fetch(dataUrl).then((response) => response.blob());
+}
+
+async function uploadMemoryImage(blob, originalName = "memoria.jpg") {
+  if (!blob) return { imageUrl: "", imagePath: "" };
+  const extension = originalName.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const imagePath = `${currentUserId}/${crypto.randomUUID()}.${extension === "jpeg" ? "jpg" : extension}`;
+  const { error } = await supabaseClient.storage
+    .from(MEMORY_BUCKET)
+    .upload(imagePath, blob, { contentType: blob.type || "image/jpeg", upsert: false });
+  if (error) throw error;
+  return { imageUrl: "", imagePath };
+}
+
+async function migrateLocalMemories() {
+  if (localStorage.getItem(MIGRATION_KEY) === "done") return;
+  const localMemories = loadLocalMemories();
+  for (const memory of localMemories) {
+    let uploaded = { imageUrl: "", imagePath: "" };
+    if (memory.image?.startsWith("data:")) {
+      uploaded = await uploadMemoryImage(await dataUrlToBlob(memory.image));
+    } else if (memory.image?.startsWith("http")) {
+      uploaded.imageUrl = memory.image;
+    }
+    const { error } = await supabaseClient.from("memories").insert({
+      owner_id: currentUserId,
+      title: memory.title,
+      body: memory.text,
+      memory_date: memory.date,
+      image_url: uploaded.imageUrl || null,
+      image_path: uploaded.imagePath || null
+    });
+    if (error) throw error;
+  }
+  localStorage.setItem(MIGRATION_KEY, "done");
 }
 
 function escapeHtml(value) {
@@ -240,25 +404,40 @@ function escapeHtml(value) {
 }
 
 function renderSavedMemories() {
-  const memories = loadMemories();
+  const memories = remoteMemories;
   const section = $("#savedMemoriesSection");
   section.hidden = memories.length === 0;
   $("#savedMemories").innerHTML = memories.map((memory) => `
     <article class="saved-card">
-      <button class="delete-memory" data-delete="${memory.id}" type="button" aria-label="Excluir ${escapeHtml(memory.title)}">×</button>
-      ${memory.image ? `<img src="${memory.image}" alt="">` : ""}
-      <time>${new Date(`${memory.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</time>
+      ${memory.owner_id === currentUserId || !supabaseClient ? `<button class="delete-memory" data-delete="${memory.id}" type="button" aria-label="Excluir ${escapeHtml(memory.title)}">×</button>` : ""}
+      ${memory.display_image_url || memory.image_url || memory.image ? `<img src="${memory.display_image_url || memory.image_url || memory.image}" alt="">` : ""}
+      <time>${new Date(`${memory.memory_date || memory.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</time>
       <h3>${escapeHtml(memory.title)}</h3>
-      <p>${escapeHtml(memory.text)}</p>
+      <p>${escapeHtml(memory.body || memory.text)}</p>
     </article>
   `).join("");
 
   $$("[data-delete]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const updated = loadMemories().filter((memory) => memory.id !== button.dataset.delete);
-      saveMemories(updated);
-      renderSavedMemories();
-      showToast("Memória removida.");
+    button.addEventListener("click", async () => {
+      const memory = remoteMemories.find((item) => item.id === button.dataset.delete);
+      try {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.from("memories").delete().eq("id", memory.id);
+          if (error) throw error;
+          if (memory.image_path) {
+            await supabaseClient.storage.from(MEMORY_BUCKET).remove([memory.image_path]);
+          }
+          await fetchMemories();
+        } else {
+          remoteMemories = remoteMemories.filter((item) => item.id !== memory.id);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteMemories));
+          renderSavedMemories();
+        }
+        showToast("Memória removida.");
+      } catch (error) {
+        console.error(error);
+        showToast("Não foi possível remover essa memória.");
+      }
     });
   });
 }
@@ -303,16 +482,40 @@ function setupMemoryForm() {
     submitButton.disabled = true;
     submitButton.firstChild.textContent = "Guardando... ";
     try {
-      const image = await resizeImage(imageInput.files[0]);
-      const memories = loadMemories();
-      memories.unshift({
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      const imageData = await resizeImage(imageInput.files[0]);
+      const memoryData = {
         title: $("#memoryTitle").value.trim(),
         text: $("#memoryText").value.trim(),
-        date: $("#memoryDate").value,
-        image
-      });
-      saveMemories(memories);
+        date: $("#memoryDate").value
+      };
+
+      if (supabaseClient && currentUserId) {
+        const uploaded = imageData
+          ? await uploadMemoryImage(await dataUrlToBlob(imageData), imageInput.files[0]?.name)
+          : { imageUrl: "", imagePath: "" };
+        const { error } = await supabaseClient.from("memories").insert({
+          owner_id: currentUserId,
+          title: memoryData.title,
+          body: memoryData.text,
+          memory_date: memoryData.date,
+          image_url: uploaded.imageUrl || null,
+          image_path: uploaded.imagePath || null
+        });
+        if (error) {
+          if (uploaded.imagePath) await supabaseClient.storage.from(MEMORY_BUCKET).remove([uploaded.imagePath]);
+          throw error;
+        }
+        await fetchMemories();
+      } else {
+        remoteMemories.unshift({
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          ...memoryData,
+          image: imageData
+        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteMemories));
+        renderSavedMemories();
+      }
+
       form.reset();
       $("#memoryDate").value = localDate();
       $("#fileName").textContent = "Escolher imagem";
@@ -330,7 +533,13 @@ function setupMemoryForm() {
 
 function setupBackup() {
   $("#exportButton").addEventListener("click", () => {
-    const data = JSON.stringify({ version: 1, memories: loadMemories() }, null, 2);
+    const memories = remoteMemories.map((memory) => ({
+      title: memory.title,
+      text: memory.body || memory.text,
+      date: memory.memory_date || memory.date,
+      image: memory.image_url || memory.image || ""
+    }));
+    const data = JSON.stringify({ version: 2, memories }, null, 2);
     const url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
     const link = document.createElement("a");
     link.href = url;
@@ -345,9 +554,16 @@ function setupBackup() {
       const content = await event.target.files[0].text();
       const parsed = JSON.parse(content);
       if (!Array.isArray(parsed.memories)) throw new Error("Formato inválido");
-      saveMemories(parsed.memories);
-      renderSavedMemories();
-      showToast("Memórias restauradas.");
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed.memories));
+      localStorage.removeItem(MIGRATION_KEY);
+      if (supabaseClient) {
+        await migrateLocalMemories();
+        await fetchMemories();
+      } else {
+        remoteMemories = parsed.memories;
+        renderSavedMemories();
+      }
+      showToast("Memórias restauradas e sincronizadas.");
     } catch (_) {
       showToast("Esse arquivo de memórias não é válido.");
     }
@@ -377,6 +593,7 @@ setupRevealAnimations();
 setupGallery();
 setupMemoryForm();
 setupBackup();
-renderSavedMemories();
+setupAuthentication();
+initializeSupabase();
 loadYouTubePlayer();
 $("#soundButton").addEventListener("click", toggleAmbientSound);

@@ -27,4 +27,13 @@ Depois de enviar alterações ao GitHub, faça um novo deploy na Vercel sem reut
 
 ## Novas memórias
 
-O formulário no "Cantinho da saudade" salva textos e imagens no armazenamento local do navegador. O botão **Baixar nossas memórias** cria uma cópia de segurança em JSON, e **Restaurar memórias** recupera essa cópia.
+O formulário usa Supabase para sincronizar textos e fotos entre os aparelhos.
+
+1. Crie um projeto em `supabase.com`.
+2. Abra o SQL Editor, cole o conteúdo de `supabase-setup.sql` e execute.
+3. Em `Authentication > Providers`, mantenha o provedor Email ativo.
+4. Em `Authentication > Users > Add user`, crie uma conta para cada um de vocês.
+5. Copie a Project URL e a chave Publishable em `supabase-config.js`.
+6. Envie os arquivos atualizados ao GitHub e faça o redeploy na Vercel.
+
+Nunca coloque a chave `service_role` no site. Use somente a chave pública `publishable` ou `anon`.
