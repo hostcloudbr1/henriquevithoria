@@ -1,0 +1,10 @@
+{
+  "name": "henrique-e-vithoria",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Um cantinho para guardar a historia de Henrique e Vithoria.",
+  "scripts": {
+    "build": "node build.js",
+    "start": "node server.js"
+  }
+}
