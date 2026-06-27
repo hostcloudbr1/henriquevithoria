@@ -1,22 +1,13 @@
--- ============================================================
--- HENRIQUE & VITHORIA - INSTALACAO COMPLETA DO SUPABASE
--- ============================================================
--- Cole TODO este arquivo em:
--- Supabase > SQL Editor > New query > Run
---
--- Pode executar mais de uma vez sem apagar as memorias existentes.
--- O mural fica publico para leitura.
--- Somente usuarios logados podem adicionar ou excluir memorias.
--- ============================================================
+-- SQL completo para corrigir um projeto Supabase ja existente.
+-- Pode executar mais de uma vez.
 
 begin;
 
 create extension if not exists pgcrypto;
 
--- 1. Cria a tabela principal.
 create table if not exists public.memories (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid,
+  owner_id uuid default auth.uid(),
   title text,
   body text,
   memory_date date,
@@ -36,7 +27,6 @@ create table if not exists public.couple_songs (
   created_at timestamptz not null default now()
 );
 
--- 2. Corrige tabelas que tenham sido criadas por uma versao anterior.
 alter table public.memories
   add column if not exists owner_id uuid,
   add column if not exists title text,
@@ -47,7 +37,6 @@ alter table public.memories
   add column if not exists created_at timestamptz not null default now();
 
 alter table public.memories
-  alter column id set default gen_random_uuid(),
   alter column owner_id set default auth.uid(),
   alter column created_at set default now();
 
@@ -61,22 +50,18 @@ alter table public.couple_songs
   add column if not exists created_at timestamptz not null default now();
 
 alter table public.couple_songs
-  alter column id set default gen_random_uuid(),
   alter column owner_id set default auth.uid(),
   alter column created_at set default now();
 
--- 3. Concede acesso a tabela pela API do Supabase.
 grant usage on schema public to anon, authenticated;
 grant select on table public.memories to anon, authenticated;
 grant insert, update, delete on table public.memories to authenticated;
 grant select on table public.couple_songs to anon, authenticated;
 grant insert, update, delete on table public.couple_songs to authenticated;
 
--- 4. Ativa a seguranca por linha.
 alter table public.memories enable row level security;
 alter table public.couple_songs enable row level security;
 
--- 5. Remove politicas antigas para evitar conflitos.
 drop policy if exists "Todos do casal podem ler memorias" on public.memories;
 drop policy if exists "Todos podem ler memorias publicadas" on public.memories;
 drop policy if exists "Cada aparelho cria suas memorias" on public.memories;
@@ -90,21 +75,18 @@ drop policy if exists "Usuarios logados criam musicas" on public.couple_songs;
 drop policy if exists "Dono atualiza sua musica" on public.couple_songs;
 drop policy if exists "Dono exclui sua musica" on public.couple_songs;
 
--- 6. Qualquer visitante pode visualizar o mural.
 create policy "Todos podem ler memorias publicadas"
 on public.memories
 for select
 to public
 using (true);
 
--- 7. Usuarios logados podem criar apenas em seu proprio nome.
 create policy "Usuarios logados criam memorias"
 on public.memories
 for insert
 to authenticated
 with check (auth.uid() is not null and owner_id = auth.uid());
 
--- 8. Cada usuario pode atualizar apenas suas proprias memorias.
 create policy "Dono atualiza sua memoria"
 on public.memories
 for update
@@ -112,7 +94,6 @@ to authenticated
 using (owner_id = auth.uid())
 with check (owner_id = auth.uid());
 
--- 9. Cada usuario pode excluir apenas suas proprias memorias.
 create policy "Dono exclui sua memoria"
 on public.memories
 for delete
@@ -144,7 +125,6 @@ for delete
 to authenticated
 using (owner_id = auth.uid());
 
--- 10. Indice para o mural carregar rapidamente.
 create index if not exists memories_date_created_idx
 on public.memories (memory_date desc, created_at desc);
 
@@ -153,35 +133,10 @@ on public.couple_songs (created_at desc);
 
 commit;
 
--- ============================================================
--- CONFIGURACAO MANUAL DE LOGIN
--- ============================================================
--- Depois de executar:
--- 1. Authentication > Providers > Email: deixe ativo.
--- 2. Authentication > Users > Add user.
--- 3. Crie uma conta para Henrique e outra para Vithoria.
--- 4. Marque os emails como confirmados.
--- ============================================================
-
--- Teste final. Deve retornar as memorias ou uma lista vazia.
-select
-  id,
-  owner_id,
-  title,
-  body,
-  memory_date,
-  image_url,
-  created_at
+select id, title, memory_date, created_at
 from public.memories
 order by memory_date desc, created_at desc;
 
-select
-  id,
-  owner_id,
-  title,
-  artist,
-  platform,
-  url,
-  created_at
+select id, title, artist, platform, created_at
 from public.couple_songs
 order by created_at desc;

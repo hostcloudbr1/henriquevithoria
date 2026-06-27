@@ -1,9 +1,13 @@
 const RELATIONSHIP_START = new Date(2026, 5, 5, 0, 0, 0);
 const STORAGE_KEY = "henrique-vithoria-memories-v1";
 const MIGRATION_KEY = "henrique-vithoria-supabase-migrated-v1";
+const REASONS_KEY = "henrique-vithoria-love-reasons-v1";
+const MISSIONS_KEY = "henrique-vithoria-couple-missions-v2";
+const REASONS_UNLOCK_DATE = new Date(2026, 6, 5, 0, 0, 0);
 let supabaseClient = null;
 let currentUserId = null;
 let remoteMemories = [];
+let remoteSongs = [];
 
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
@@ -119,6 +123,175 @@ function renderMilestones() {
       </article>
     `;
   }).join("");
+}
+
+const loveReasons = [
+  "Porque você transformou conversas simples em um lugar onde meu coração quis morar.",
+  "Porque seu sorriso tem um jeito de arrumar o meu dia inteiro.",
+  "Porque até o silêncio com você parece carinho.",
+  "Porque eu sinto paz quando imagino meu futuro e vejo você nele.",
+  "Porque você me faz querer ser melhor sem deixar de ser eu.",
+  "Porque sua voz virou uma das coisas mais bonitas que eu conheço.",
+  "Porque você cuida de mim até nos detalhes pequenos.",
+  "Porque a saudade de você prova o tamanho do espaço que você ocupa em mim.",
+  "Porque nossas madrugadas me ensinaram que tempo bom passa rápido demais.",
+  "Porque você é linda de um jeito que vai muito além do que os olhos conseguem ver.",
+  "Porque seu jeito me prende sem me apertar.",
+  "Porque eu amo quando você fica toda carinhosa comigo.",
+  "Porque você me entende mesmo quando eu não sei explicar direito.",
+  "Porque você trouxe cor para dias que eu nem sabia que estavam apagados.",
+  "Porque eu confio em você com partes minhas que quase ninguém conhece.",
+  "Porque você é minha vontade favorita de ficar.",
+  "Porque toda chamada com você parece curta, mesmo quando dura horas.",
+  "Porque você tem um coração que dá vontade de proteger do mundo inteiro.",
+  "Porque eu amo seu jeitinho, suas manias e até suas birrinhas.",
+  "Porque você me faz rir de um jeito leve.",
+  "Porque você é minha paz e meu frio na barriga ao mesmo tempo.",
+  "Porque você me fez entender que amor também é cuidado diário.",
+  "Porque quando penso em casa, penso em você.",
+  "Porque você deixa qualquer plano mais bonito só por estar nele.",
+  "Porque eu amo a forma como você existe na minha vida.",
+  "Porque sua presença, mesmo de longe, consegue ficar perto de mim.",
+  "Porque eu gosto de te imaginar feliz, segura e amada.",
+  "Porque você merece o mundo, e eu quero te entregar o meu melhor.",
+  "Porque você me deu motivos para acreditar em nós.",
+  "Porque eu amo chamar você de minha.",
+  "Porque você faz o meu coração descansar.",
+  "Porque seus detalhes viraram meus favoritos.",
+  "Porque com você eu sinto que posso construir algo de verdade.",
+  "Porque eu amo quando a gente fala besteira e ri junto.",
+  "Porque você é minha escolha bonita em todos os dias.",
+  "Porque você faz falta até quando acabou de sair.",
+  "Porque eu amo cuidar de você.",
+  "Porque eu amo ser cuidado por você.",
+  "Porque você tem um jeito único de ficar nos meus pensamentos.",
+  "Porque você me faz querer viver coisas simples e gigantes ao seu lado.",
+  "Porque eu amo nossa história, desde o começo até tudo que ainda vem.",
+  "Porque você é a pessoa para quem meu coração sempre quer voltar.",
+  "Porque eu amo a delicadeza que existe em nós.",
+  "Porque você me faz sentir sortudo por poder te amar.",
+  "Porque você virou meu assunto favorito.",
+  "Porque eu amo cada plano que começa com nós dois.",
+  "Porque sua felicidade importa muito para mim.",
+  "Porque você é minha mulher demais, do jeitinho mais lindo possível.",
+  "Porque se eu pudesse escolher de novo, escolheria você sem pensar duas vezes.",
+  "Porque cinquenta motivos ainda são pouco para explicar o quanto eu amo você."
+];
+
+const starPositions = [
+  [10, 18], [18, 31], [29, 14], [41, 25], [53, 12], [66, 22], [78, 15], [90, 28], [14, 48], [25, 40],
+  [37, 53], [49, 42], [61, 55], [73, 44], [86, 58], [8, 72], [21, 64], [34, 78], [47, 69], [60, 82],
+  [74, 72], [91, 79], [16, 12], [31, 31], [45, 15], [58, 34], [70, 10], [83, 35], [12, 59], [28, 58],
+  [42, 72], [55, 63], [69, 77], [82, 67], [19, 84], [36, 22], [51, 30], [64, 46], [77, 52], [88, 18],
+  [7, 38], [23, 22], [39, 38], [54, 49], [68, 62], [81, 83], [93, 48], [30, 88], [50, 86], [72, 31]
+];
+
+let discoveredReasons = [];
+let selectedReasonIndex = null;
+let skyAnimationFrame = null;
+
+function loadDiscoveredReasons() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(REASONS_KEY)) || [];
+    return stored.filter((index) => Number.isInteger(index) && index >= 0 && index < loveReasons.length);
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveDiscoveredReasons() {
+  localStorage.setItem(REASONS_KEY, JSON.stringify(discoveredReasons));
+}
+
+function updateReasonsProgress() {
+  const total = discoveredReasons.length;
+  $("#reasonCount").textContent = `${total} / ${loveReasons.length} descobertos`;
+  $("#reasonProgress").style.width = `${(total / loveReasons.length) * 100}%`;
+  $("#reasonsFinal").hidden = total !== loveReasons.length;
+  $$(".love-star").forEach((star) => {
+    const index = Number(star.dataset.reasonIndex);
+    star.classList.toggle("discovered", discoveredReasons.includes(index));
+    star.classList.toggle("selected", selectedReasonIndex === index);
+  });
+}
+
+function openReason(index) {
+  selectedReasonIndex = index;
+  if (!discoveredReasons.includes(index)) {
+    discoveredReasons.push(index);
+    saveDiscoveredReasons();
+  }
+  $("#reasonTitle").textContent = `Motivo ${pad(index + 1)}`;
+  $("#reasonText").textContent = loveReasons[index];
+  updateReasonsProgress();
+}
+
+function openRandomReason() {
+  const closed = loveReasons.map((_, index) => index).filter((index) => !discoveredReasons.includes(index));
+  const pool = closed.length ? closed : loveReasons.map((_, index) => index);
+  const index = pool[Math.floor(Math.random() * pool.length)];
+  openReason(index);
+}
+
+function setupLoveReasons() {
+  const section = $("#motivos");
+  const navLink = $("#reasonsNavLink");
+  const unlocked = new Date() >= REASONS_UNLOCK_DATE;
+  if (section) section.hidden = !unlocked;
+  if (navLink) navLink.hidden = !unlocked;
+  if (!unlocked) return;
+
+  const stage = $("#reasonsStage");
+  if (!stage) return;
+  discoveredReasons = loadDiscoveredReasons();
+  stage.innerHTML = loveReasons.map((_, index) => {
+    const [left, top] = starPositions[index];
+    return `<button class="love-star" type="button" data-reason-index="${index}" style="left:${left}%;top:${top}%;" aria-label="Abrir motivo ${index + 1}"></button>`;
+  }).join("");
+  $$(".love-star", stage).forEach((star) => {
+    star.addEventListener("click", () => openReason(Number(star.dataset.reasonIndex)));
+  });
+  $("#reasonRandom").addEventListener("click", openRandomReason);
+  updateReasonsProgress();
+  drawReasonsSky();
+}
+
+function drawReasonsSky() {
+  const canvas = $("#reasonsSky");
+  if (!canvas) return;
+  const context = canvas.getContext("2d");
+  const stars = Array.from({ length: 120 }, () => ({
+    x: Math.random(),
+    y: Math.random(),
+    r: Math.random() * 1.7 + .25,
+    pulse: Math.random() * Math.PI * 2
+  }));
+
+  const resize = () => {
+    const rect = canvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+    canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  };
+
+  const draw = (time = 0) => {
+    const rect = canvas.getBoundingClientRect();
+    context.clearRect(0, 0, rect.width, rect.height);
+    stars.forEach((star) => {
+      const alpha = .22 + Math.sin(time / 900 + star.pulse) * .18;
+      context.beginPath();
+      context.fillStyle = `rgba(255, 244, 255, ${alpha})`;
+      context.arc(star.x * rect.width, star.y * rect.height, star.r, 0, Math.PI * 2);
+      context.fill();
+    });
+    skyAnimationFrame = requestAnimationFrame(draw);
+  };
+
+  window.addEventListener("resize", resize);
+  resize();
+  cancelAnimationFrame(skyAnimationFrame);
+  skyAnimationFrame = requestAnimationFrame(draw);
 }
 
 function setupRevealAnimations() {
@@ -244,6 +417,138 @@ function isSupabaseConfigured() {
   );
 }
 
+function getFallbackSongs() {
+  return [];
+}
+
+function detectMusicLink(url) {
+  try {
+    const parsed = new URL(url.trim());
+    const host = parsed.hostname.replace(/^www\./, "");
+    if (host === "youtu.be" || host.endsWith("youtube.com") || host.endsWith("youtube-nocookie.com")) {
+      return { platform: "youtube", label: "YouTube", url: parsed.href };
+    }
+    if (host.endsWith("spotify.com")) {
+      return { platform: "spotify", label: "Spotify", url: parsed.href };
+    }
+  } catch (_) {
+    return null;
+  }
+  return null;
+}
+
+function setPlaylistStatus(message, isError = false) {
+  const status = $("#playlistStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.style.color = isError ? "#ff9aad" : "";
+}
+
+function renderPlaylist() {
+  const grid = $("#playlistGrid");
+  if (!grid) return;
+  const songs = remoteSongs.length ? remoteSongs : getFallbackSongs();
+  if (!songs.length) {
+    grid.innerHTML = `
+      <article class="song-card empty-song-card">
+        <span class="song-number">00</span>
+        <div>
+          <p>Playlist vazia</p>
+          <h3>Nenhuma música ainda</h3>
+          <span>Entrem no cantinho para guardar a primeira.</span>
+        </div>
+      </article>
+    `;
+    return;
+  }
+  grid.innerHTML = songs.map((song, index) => {
+    const platform = song.platform === "spotify" ? "Spotify" : "YouTube";
+    const canDelete = currentUserId && song.owner_id === currentUserId && !String(song.id).startsWith("fallback");
+    return `
+      <article class="song-card">
+        <span class="song-number">${pad(index + 1)}</span>
+        <div>
+          <p>${platform}</p>
+          <h3>${escapeHtml(song.title)}</h3>
+          <span>${escapeHtml(song.artist || platform)}</span>
+          ${song.note ? `<b class="song-note">${escapeHtml(song.note)}</b>` : ""}
+        </div>
+        <a href="${escapeHtml(song.url)}" target="_blank" rel="noreferrer" aria-label="Abrir ${escapeHtml(song.title)} no ${platform}">${platform}</a>
+        ${canDelete ? `<button class="delete-song" data-song-delete="${song.id}" type="button" aria-label="Excluir ${escapeHtml(song.title)}">×</button>` : ""}
+      </article>
+    `;
+  }).join("");
+
+  $$("[data-song-delete]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        const { error } = await supabaseClient.from("couple_songs").delete().eq("id", button.dataset.songDelete);
+        if (error) throw error;
+        await fetchPlaylist();
+        showToast("Música removida da playlist.");
+      } catch (error) {
+        console.error("Excluir música:", error);
+        showToast("Não foi possível remover essa música.");
+      }
+    });
+  });
+}
+
+async function fetchPlaylist() {
+  if (!supabaseClient) {
+    remoteSongs = [];
+    renderPlaylist();
+    return;
+  }
+  const { data, error } = await supabaseClient
+    .from("couple_songs")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  remoteSongs = data || [];
+  renderPlaylist();
+}
+
+function setupPlaylistForm() {
+  const form = $("#songForm");
+  if (!form) return;
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!supabaseClient || !currentUserId) {
+      showToast("Entre no cantinho para adicionar músicas.");
+      return;
+    }
+    const link = detectMusicLink($("#songUrl").value);
+    if (!link) {
+      showToast("Cole um link válido do YouTube ou Spotify.");
+      return;
+    }
+    const button = $(".primary-button", form);
+    button.disabled = true;
+    button.firstChild.textContent = "Guardando... ";
+    try {
+      const { error } = await supabaseClient.from("couple_songs").insert({
+        owner_id: currentUserId,
+        title: $("#songTitle").value.trim(),
+        artist: $("#songArtist").value.trim(),
+        note: $("#songNote").value.trim(),
+        url: link.url,
+        platform: link.platform
+      });
+      if (error) throw error;
+      form.reset();
+      await fetchPlaylist();
+      showToast("Música guardada na playlist.");
+    } catch (error) {
+      console.error("Salvar música:", error);
+      showToast("Não foi possível salvar essa música. Confira o SQL da playlist.");
+    } finally {
+      button.disabled = false;
+      button.firstChild.textContent = "Guardar música ";
+    }
+  });
+}
+
 function setStorageStatus(message, isError = false) {
   const status = $("#storageStatus");
   if (!status) return;
@@ -255,9 +560,12 @@ async function initializeSupabase() {
   if (!isSupabaseConfigured()) {
     remoteMemories = loadLocalMemories();
     renderSavedMemories();
+    renderPlaylist();
     setStorageStatus("Configure o Supabase para sincronizar as memórias entre celulares.", true);
+    setPlaylistStatus("Configure o Supabase para vocês adicionarem músicas pela página.", true);
     $("#authForm").hidden = true;
     $("#memoryForm").hidden = true;
+    $("#songForm").hidden = true;
     return;
   }
 
@@ -265,6 +573,15 @@ async function initializeSupabase() {
   supabaseClient = window.supabase.createClient(config.url, config.publishableKey);
 
   try {
+    await fetchMemories();
+    try {
+      await fetchPlaylist();
+    } catch (playlistError) {
+      console.error("Playlist:", playlistError);
+      remoteSongs = [];
+      renderPlaylist();
+      setPlaylistStatus("Execute o SQL atualizado para ativar a playlist editável.", true);
+    }
     const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
     if (sessionError) throw sessionError;
     await applySession(sessionData.session);
@@ -277,9 +594,12 @@ async function initializeSupabase() {
     currentUserId = null;
     remoteMemories = [];
     renderSavedMemories();
+    renderPlaylist();
     $("#authForm").hidden = false;
     $("#memoryForm").hidden = true;
+    $("#songForm").hidden = true;
     setStorageStatus("Banco desconectado. Nada será salvo apenas neste navegador.", true);
+    setPlaylistStatus("Playlist usando música padrão enquanto o Supabase está desconectado.", true);
   }
 }
 
@@ -291,21 +611,34 @@ async function applySession(session) {
   $("#logoutButton").hidden = !loggedIn;
   $("#exportButton").hidden = !loggedIn;
   $('label[for="importInput"]').hidden = !loggedIn;
+  $("#songForm").hidden = !loggedIn;
 
   if (!loggedIn) {
-    remoteMemories = [];
-    renderSavedMemories();
-    setStorageStatus("Entre com uma das contas de vocês para acessar as memórias.");
+    await fetchMemories();
+    try {
+      await fetchPlaylist();
+    } catch (error) {
+      console.error("Playlist:", error);
+      remoteSongs = [];
+      renderPlaylist();
+      setPlaylistStatus("Execute o SQL atualizado para ativar a playlist editável.", true);
+      return;
+    }
+    setStorageStatus("As memórias publicadas estão visíveis para todos. Entre para adicionar uma nova.");
+    setPlaylistStatus("Entre no cantinho para adicionar músicas à playlist.");
     return;
   }
 
   try {
     await migrateLocalMemories();
     await fetchMemories();
-    setStorageStatus("Memórias sincronizadas com segurança entre os aparelhos de vocês.");
+    await fetchPlaylist();
+    setStorageStatus("Nova memória será publicada no mural e ficará visível para todos.");
+    setPlaylistStatus("Cole um link do YouTube ou Spotify para guardar uma música de vocês.");
   } catch (error) {
     console.error("Sincronização:", error);
     setStorageStatus("Login realizado, mas não foi possível carregar as memórias. Confira o SQL.", true);
+    setPlaylistStatus("Login realizado, mas a playlist precisa do SQL atualizado.", true);
   }
 }
 
@@ -380,7 +713,7 @@ function renderSavedMemories() {
   section.hidden = memories.length === 0;
   $("#savedMemories").innerHTML = memories.map((memory) => `
     <article class="saved-card">
-      ${memory.owner_id === currentUserId || !supabaseClient ? `<button class="delete-memory" data-delete="${memory.id}" type="button" aria-label="Excluir ${escapeHtml(memory.title)}">×</button>` : ""}
+      ${currentUserId && memory.owner_id === currentUserId ? `<button class="delete-memory" data-delete="${memory.id}" type="button" aria-label="Excluir ${escapeHtml(memory.title)}">×</button>` : ""}
       ${memory.image_url || memory.image ? `<img src="${memory.image_url || memory.image}" alt="">` : ""}
       <time>${new Date(`${memory.memory_date || memory.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</time>
       <h3>${escapeHtml(memory.title)}</h3>
@@ -527,6 +860,158 @@ function setupBackup() {
   });
 }
 
+const coupleMissions = [
+  {
+    type: "Carinho",
+    title: "Áudio de 30 segundos",
+    text: "Cada um grava um áudio dizendo uma coisa simples que ama no outro hoje. Sem ensaiar, só coração."
+  },
+  {
+    type: "Memória",
+    title: "A melhor lembrança",
+    text: "Conversem sobre uma lembrança de vocês que parece pequena, mas ficou guardada de um jeito especial."
+  },
+  {
+    type: "Chamada",
+    title: "Cinco minutos olhando",
+    text: "Em chamada, fiquem cinco minutos juntos sem pressa: olhando, rindo, falando besteira e aproveitando a presença."
+  },
+  {
+    type: "Foto",
+    title: "Um pedacinho do agora",
+    text: "Cada um manda uma foto do que está vendo agora e explica por que queria que o outro estivesse ali."
+  },
+  {
+    type: "Planos",
+    title: "Nosso próximo encontro",
+    text: "Escolham uma coisa que querem fazer juntos no próximo encontro, mesmo que seja simples."
+  },
+  {
+    type: "Declaração",
+    title: "Três motivos de hoje",
+    text: "Cada um fala três motivos pelos quais escolheria o outro de novo hoje."
+  },
+  {
+    type: "Risada",
+    title: "Memória engraçada",
+    text: "Lembrem de uma conversa, print ou momento que fez vocês rirem muito, e revivam isso juntos."
+  },
+  {
+    type: "Cuidado",
+    title: "Pergunta sincera",
+    text: "Perguntem um ao outro: como eu posso cuidar melhor de você essa semana?"
+  },
+  {
+    type: "Saudade",
+    title: "Boa noite especial",
+    text: "Antes de dormir, mandem uma mensagem dizendo como queriam terminar o dia se estivessem juntinhos."
+  },
+  {
+    type: "Futuro",
+    title: "Uma cena nossa",
+    text: "Descrevam uma cena do futuro de vocês com detalhes: lugar, cheiro, música e o que vocês estariam fazendo."
+  },
+  {
+    type: "Jogo",
+    title: "Pergunta surpresa",
+    text: "Cada um faz uma pergunta que começa com: 'quando você percebeu que...?' e deixa a resposta virar conversa."
+  },
+  {
+    type: "Presença",
+    title: "Playlist em chamada",
+    text: "Escolham uma música da playlist, deem play juntos e fiquem conversando enquanto ela toca."
+  },
+  {
+    type: "Picante",
+    title: "Elogio proibido",
+    text: "Cada um manda uma mensagem dizendo uma coisa no outro que mexe com a cabeça e deixa vontade de chegar mais perto."
+  },
+  {
+    type: "Picante",
+    title: "Verdade com desejo",
+    text: "Cada um responde: qual carinho, beijo ou detalhe do outro você mais fica imaginando quando bate saudade?"
+  },
+  {
+    type: "Picante",
+    title: "Foto misteriosa",
+    text: "Mandem uma foto discreta de um detalhe de vocês hoje: perfume, roupa, sorriso, cabelo ou qualquer coisa que provoque saudade."
+  },
+  {
+    type: "Picante",
+    title: "Promessa para depois",
+    text: "Cada um escreve uma promessa carinhosa e provocante para cumprir quando estiverem juntos de novo."
+  },
+  {
+    type: "Picante",
+    title: "Uma cena só nossa",
+    text: "Descrevam uma cena romântica e intensa que gostariam de viver juntos, sem pressa e com muito carinho."
+  },
+  {
+    type: "Picante",
+    title: "Escolha um carinho",
+    text: "Cada um escolhe um carinho que quer receber no próximo encontro e explica por que pensou nele."
+  }
+];
+
+function loadMissionHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(MISSIONS_KEY)) || [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveMissionHistory(history) {
+  localStorage.setItem(MISSIONS_KEY, JSON.stringify(history.slice(0, 3)));
+}
+
+function renderMissionHistory() {
+  const container = $("#missionHistory");
+  if (!container) return;
+  const history = loadMissionHistory();
+  container.innerHTML = history.length
+    ? history.map((mission) => `
+      <article>
+        <strong>${escapeHtml(mission.title)}</strong>
+        <span>${escapeHtml(mission.type)} · ${escapeHtml(mission.date)}</span>
+      </article>
+    `).join("")
+    : "<article><strong>Nenhuma ainda</strong><span>Sortiem a primeira</span></article>";
+}
+
+function setMission(mission, save = true) {
+  $("#missionType").textContent = mission.type;
+  $("#missionTitle").textContent = mission.title;
+  $("#missionText").textContent = mission.text;
+  if (!save) return;
+  const history = loadMissionHistory();
+  saveMissionHistory([
+    {
+      title: mission.title,
+      type: mission.type,
+      date: new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+    },
+    ...history.filter((item) => item.title !== mission.title)
+  ]);
+  renderMissionHistory();
+}
+
+function setupCoupleMissions() {
+  const button = $("#missionButton");
+  if (!button) return;
+  renderMissionHistory();
+  const history = loadMissionHistory();
+  const lastMission = history[0] && coupleMissions.find((mission) => mission.title === history[0].title);
+  if (lastMission) setMission(lastMission, false);
+  button.addEventListener("click", () => {
+    const currentTitle = $("#missionTitle").textContent;
+    const options = coupleMissions.filter((mission) => mission.title !== currentTitle);
+    const mission = options[Math.floor(Math.random() * options.length)];
+    setMission(mission);
+    showToast("Missão do casal sorteada.");
+  });
+}
+
 let toastTimer;
 function showToast(message) {
   const toast = $("#toast");
@@ -545,10 +1030,13 @@ document.addEventListener("mousemove", (event) => {
 updateCounter();
 setInterval(updateCounter, 1000);
 renderMilestones();
+setupLoveReasons();
 setupRevealAnimations();
 setupGallery();
 setupMemoryForm();
 setupBackup();
+setupCoupleMissions();
+setupPlaylistForm();
 setupAuthentication();
 initializeSupabase();
 loadYouTubePlayer();

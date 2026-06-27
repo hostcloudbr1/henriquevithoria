@@ -39,3 +39,5 @@ O formulário usa Supabase para sincronizar textos e fotos entre os aparelhos.
 Nunca coloque a chave `service_role` no site. Use somente a chave pública `publishable` ou `anon`.
 
 As fotos são comprimidas antes do envio e armazenadas na própria tabela `memories`; não é necessário criar um bucket no Supabase Storage.
+
+Para tornar o mural público em um projeto já configurado, execute `supabase-tornar-mural-publico.sql`. Visitantes podem visualizar; somente as contas autorizadas podem inserir ou excluir.

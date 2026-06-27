@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#08050d">
   <meta name="description" content="O nosso cantinho: memórias, amor e a história de Carlos Henrique e Vithoria.">
   <title>Henrique & Vithoria | Nosso infinito</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -20,6 +20,9 @@
     <nav aria-label="Navegação principal">
       <a href="#historia">Nossa história</a>
       <a href="#memorias">Memórias</a>
+      <a href="#motivos" id="reasonsNavLink">50 motivos</a>
+      <a href="#playlist">Playlist</a>
+      <a href="#missoes">Missões</a>
       <a href="#saudade">Cantinho da saudade</a>
     </nav>
     <button class="sound-button" id="soundButton" type="button" aria-pressed="false">
@@ -124,6 +127,29 @@
       </div>
     </section>
 
+    <section class="reasons-section" id="motivos" hidden>
+      <canvas class="reasons-sky" id="reasonsSky" aria-hidden="true"></canvas>
+      <div class="reasons-header reveal">
+        <p class="eyebrow">50 estrelas para você</p>
+        <h2>Cada estrela guarda<br><em>um motivo de eu amar você.</em></h2>
+        <p>Clique nas estrelas para abrir os motivos. Quando todas forem descobertas, o céu guarda uma última declaração.</p>
+      </div>
+      <div class="reasons-experience reveal">
+        <div class="reasons-stage" id="reasonsStage" aria-label="Céu com 50 motivos para amar Vithoria"></div>
+        <aside class="reason-panel" aria-live="polite">
+          <span class="reason-count" id="reasonCount">0 / 50 descobertos</span>
+          <h3 id="reasonTitle">Escolha uma estrela</h3>
+          <p id="reasonText">Tem cinquenta pedacinhos do meu coração esperando por você nesse céu.</p>
+          <div class="reason-progress" aria-hidden="true"><span id="reasonProgress"></span></div>
+          <button class="reason-random" id="reasonRandom" type="button">Abrir uma estrela <span>+</span></button>
+        </aside>
+      </div>
+      <div class="reasons-final" id="reasonsFinal" hidden>
+        <p>Mesmo depois de cinquenta motivos, ainda falta espaço para tudo que sinto.</p>
+        <strong>Eu amo você inteira, Vithoria. Hoje, amanhã e em todos os nossos infinitos.</strong>
+      </div>
+    </section>
+
     <section class="memory-section" id="memorias">
       <div class="section-heading split reveal">
         <div>
@@ -168,6 +194,60 @@
       </div>
     </section>
 
+    <section class="playlist-section" id="playlist">
+      <div class="section-heading split reveal">
+        <div>
+          <p class="eyebrow">Playlist do casal</p>
+          <h2>Músicas que guardam<br><em>um pedaço de nós.</em></h2>
+        </div>
+        <p>Cole links do YouTube ou Spotify para guardar as músicas de vocês com uma lembrança.</p>
+      </div>
+      <div class="playlist-tools reveal">
+        <form class="song-form" id="songForm" hidden>
+          <label>
+            <span>Nome da música</span>
+            <input id="songTitle" type="text" maxlength="90" placeholder="Ex.: Aliança" required>
+          </label>
+          <label>
+            <span>Artista</span>
+            <input id="songArtist" type="text" maxlength="90" placeholder="Ex.: Tribalistas">
+          </label>
+          <label class="song-link-field">
+            <span>Link do YouTube ou Spotify</span>
+            <input id="songUrl" type="url" placeholder="Cole o link aqui" required>
+          </label>
+          <label class="song-note-field">
+            <span>Lembrança dessa música</span>
+            <input id="songNote" type="text" maxlength="140" placeholder="Ex.: para ouvir quando bater saudade">
+          </label>
+          <button class="primary-button" type="submit">Guardar música <span>→</span></button>
+        </form>
+        <p class="playlist-status" id="playlistStatus">Entre no cantinho para adicionar músicas à playlist.</p>
+      </div>
+      <div class="playlist-grid" id="playlistGrid">
+      </div>
+    </section>
+
+    <section class="missions-section" id="missoes">
+      <div class="missions-intro reveal">
+        <p class="eyebrow">Missão do casal</p>
+        <h2>Um carinho novo<br><em>para viver hoje.</em></h2>
+        <p>Quando bater saudade, quando estiverem em chamada ou quando quiserem rir juntos, sorteiem uma missão e cumpram do jeitinho de vocês.</p>
+      </div>
+      <div class="mission-board reveal">
+        <div class="mission-card">
+          <span id="missionType">Missão surpresa</span>
+          <h3 id="missionTitle">Sortear uma missão</h3>
+          <p id="missionText">Clique no botão para receber uma pequena ideia para vocês dois viverem hoje.</p>
+          <button class="primary-button" id="missionButton" type="button">Sortear missão <span>→</span></button>
+        </div>
+        <div class="mission-history">
+          <span class="tiny-label">Últimas missões</span>
+          <div id="missionHistory"></div>
+        </div>
+      </div>
+    </section>
+
     <section class="milestones-section">
       <div class="section-heading reveal">
         <p class="eyebrow">Homenagens que o tempo revela</p>
@@ -181,7 +261,7 @@
       <div class="add-memory-intro reveal">
         <p class="eyebrow">Cantinho da saudade</p>
         <h2>Quando a saudade bater,<br><em>deixa um pedacinho seu aqui.</em></h2>
-        <p>Adicione uma lembrança, uma foto, uma carta ou só uma frase que você não quer esquecer.</p>
+        <p>As lembranças publicadas aparecem para todos que visitarem o site. Apenas vocês podem adicionar ou excluir.</p>
         <div class="memory-actions">
           <button class="text-button" id="exportButton" type="button">Baixar nossas memórias</button>
           <label class="text-button" for="importInput">Restaurar memórias</label>
@@ -192,7 +272,7 @@
       <form class="memory-form auth-form reveal" id="authForm">
         <p class="eyebrow">Nosso acesso</p>
         <h3>Entre no cantinho de vocês</h3>
-        <p>Use uma das duas contas criadas no Supabase para ver e guardar as memórias.</p>
+        <p>Use uma das duas contas criadas no Supabase para guardar novas memórias. O mural abaixo é público.</p>
         <label>
           <span>E-mail</span>
           <input id="authEmail" type="email" autocomplete="email" required>
@@ -259,7 +339,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js?v=4"></script>
-  <script src="script.js?v=4"></script>
+  <script src="supabase-config.js?v=5"></script>
+  <script src="script.js?v=5"></script>
 </body>
 </html>
