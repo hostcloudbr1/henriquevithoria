@@ -2,7 +2,7 @@ const RELATIONSHIP_START = new Date(2026, 5, 5, 0, 0, 0);
 const STORAGE_KEY = "henrique-vithoria-memories-v1";
 const MIGRATION_KEY = "henrique-vithoria-supabase-migrated-v1";
 const REASONS_KEY = "henrique-vithoria-love-reasons-v1";
-const MISSIONS_KEY = "henrique-vithoria-couple-missions-v2";
+const MISSIONS_KEY = "henrique-vithoria-couple-missions-v3";
 const REASONS_UNLOCK_DATE = new Date(2026, 6, 5, 0, 0, 0);
 let supabaseClient = null;
 let currentUserId = null;
@@ -860,98 +860,302 @@ function setupBackup() {
   });
 }
 
-const coupleMissions = [
+const missionBlueprints = [
   {
-    type: "Carinho",
-    title: "Áudio de 30 segundos",
-    text: "Cada um grava um áudio dizendo uma coisa simples que ama no outro hoje. Sem ensaiar, só coração."
+    key: "leve",
+    type: "Diversão e carinho",
+    titles: ["Riso garantido", "Só vocês dois", "Momento bobo", "Desafio fofo", "Do nada", "Sem vergonha", "Nosso jeitinho", "Dose de alegria", "Surpresa leve", "Bagunça a dois"],
+    prompts: [
+      "Façam uma imitação exagerada um do outro e tentem descobrir qual mania está sendo representada.",
+      "Inventem um apelido completamente novo um para o outro e contem de onde ele teria surgido.",
+      "Mandem um áudio cantando o refrão de uma música que combine com o casal, mesmo que fique desafinado.",
+      "Escolham três emojis para resumir o relacionamento de vocês hoje e expliquem cada escolha.",
+      "Contem o pior mico que já passaram e decidam qual dos dois merece o troféu da vergonha.",
+      "Criem um meme sobre uma situação que só vocês dois entenderiam.",
+      "Descrevam um ao outro como se fossem personagens de um filme muito dramático.",
+      "Façam um ranking das cinco comidas que mais gostariam de dividir agora.",
+      "Inventem uma manchete de jornal sobre o namoro de vocês.",
+      "Escolham um objeto perto de vocês e tentem vendê-lo ao outro como se fosse um produto revolucionário.",
+      "Tentem falar um trava-língua sem errar e deixem o outro escolher a punição engraçada.",
+      "Criem uma história juntos, alternando uma frase de cada vez até chegar a um final absurdo.",
+      "Mostrem o item mais estranho que conseguirem encontrar no quarto e contem a história dele.",
+      "Façam um desafio de não rir enquanto um tenta fazer a expressão mais ridícula possível.",
+      "Assobiem ou cantarolem uma música para o outro adivinhar.",
+      "Criem o nome, o cartaz e a frase de efeito de um filme inspirado na história de vocês.",
+      "Desenhem um retrato um do outro sem tirar o dedo da tela ou o lápis do papel.",
+      "Respondam: se o relacionamento de vocês fosse uma sobremesa, qual seria e por quê?",
+      "Escolham um filtro engraçado e façam juntos a foto mais caótica possível.",
+      "Inventem uma dança de dez segundos que vire a coreografia oficial do casal."
+    ],
+    twists: [
+      "Façam isso em chamada e não vale ensaiar antes.",
+      "Cada um tem apenas sessenta segundos para completar a missão.",
+      "Quem rir primeiro precisa mandar um elogio criativo.",
+      "Gravem apenas um áudio e aceitem a primeira tentativa.",
+      "Incluam uma lembrança real de vocês no meio da brincadeira.",
+      "A resposta precisa conter uma palavra escolhida pelo outro.",
+      "Façam por mensagem usando no máximo cinco linhas.",
+      "O vencedor escolhe a música que vocês ouvirão depois.",
+      "Transformem o resultado em uma pequena tradição do casal.",
+      "No final, deem uma nota de zero a dez para a atuação do outro."
+    ],
+    endings: [
+      "Terminem escolhendo o momento mais engraçado.",
+      "Guardem o resultado para rever quando bater saudade.",
+      "Quem se divertir mais escolhe a próxima missão.",
+      "Finalizem com um elogio sincero.",
+      "Prometam repetir a brincadeira quando estiverem juntos."
+    ]
   },
   {
-    type: "Memória",
-    title: "A melhor lembrança",
-    text: "Conversem sobre uma lembrança de vocês que parece pequena, mas ficou guardada de um jeito especial."
+    key: "pessoal",
+    type: "Pergunta pessoal",
+    titles: ["Conversa de verdade", "Entre nós", "Coração aberto", "Sem resposta pronta", "Quero te conhecer", "Pergunta sincera", "Nossa intimidade", "Um pouco mais fundo", "Só a verdade", "Descoberta a dois"],
+    prompts: [
+      "Respondam: qual foi o momento exato em que você percebeu que estava se apaixonando?",
+      "Respondam: qual insegurança sua você gostaria que o outro entendesse melhor?",
+      "Contem qual gesto pequeno do outro faz vocês se sentirem mais amados.",
+      "Respondam: o que você mais teme perder e como o outro pode trazer segurança?",
+      "Contem uma coisa sobre a infância que explica muito de quem vocês são hoje.",
+      "Respondam: em que momento você mais sentiu orgulho do outro?",
+      "Digam qual hábito gostariam de construir juntos nos próximos meses.",
+      "Respondam: qual parte da sua personalidade você ainda tem dificuldade de mostrar?",
+      "Contem que tipo de carinho ajuda quando o dia está pesado.",
+      "Respondam: qual sonho individual você quer muito que o outro acompanhe?",
+      "Digam uma coisa que aprenderam sobre amor depois que começaram a namorar.",
+      "Respondam: quando você se sente mais desejado, admirado e escolhido pelo outro?",
+      "Contem uma memória que ainda emociona, mesmo que pareça simples.",
+      "Respondam: qual conversa importante vocês têm adiado e poderiam começar com calma?",
+      "Digam como imaginam uma rotina feliz quando puderem estar mais perto.",
+      "Respondam: qual limite pessoal é importante que o outro sempre respeite?",
+      "Contem uma qualidade própria que aprenderam a reconhecer por causa do relacionamento.",
+      "Respondam: qual pedido de desculpas ou agradecimento ainda merece ser dito?",
+      "Digam três coisas que querem viver juntos antes do próximo aniversário de namoro.",
+      "Respondam: o que faria você se sentir ainda mais cuidado nesta semana?"
+    ],
+    twists: [
+      "Cada um responde por dois minutos sem ser interrompido.",
+      "Depois de responder, o outro só pode fazer uma pergunta de aprofundamento.",
+      "Comecem a resposta com 'eu nunca te contei, mas...'.",
+      "Respondam primeiro por áudio e depois conversem em chamada.",
+      "A resposta precisa incluir um exemplo real vivido por vocês.",
+      "Antes de responder, tentem adivinhar o que o outro dirá.",
+      "Não tentem resolver nada; apenas escutem e acolham.",
+      "Cada um deve terminar dizendo como o outro pode ajudar.",
+      "Façam a conversa com as luzes baixas e sem outras distrações.",
+      "Depois troquem um elogio relacionado ao que foi compartilhado."
+    ],
+    endings: [
+      "Terminem agradecendo pela confiança.",
+      "Escolham uma atitude pequena para colocar em prática amanhã.",
+      "Guardem a resposta mais bonita como lembrança.",
+      "Finalizem com a frase 'estou com você'.",
+      "Terminem escolhendo algo novo que descobriram um no outro."
+    ]
   },
   {
-    type: "Chamada",
-    title: "Cinco minutos olhando",
-    text: "Em chamada, fiquem cinco minutos juntos sem pressa: olhando, rindo, falando besteira e aproveitando a presença."
+    key: "jogos",
+    type: "Jogo e desafio",
+    titles: ["Valendo tudo", "Duelo do casal", "Quem conhece melhor?", "Rodada surpresa", "Jogo rápido", "Desafio aceito", "Um contra o outro", "Sem roubar", "Melhor de três", "Prontos para jogar?"],
+    prompts: [
+      "Joguem verdade ou desafio com três rodadas para cada um.",
+      "Façam dez perguntas de 'isso ou aquilo' e comparem as respostas no final.",
+      "Cada um escreve cinco fatos sobre si, sendo um falso, para o outro descobrir.",
+      "Joguem adedonha com categorias inventadas sobre o relacionamento.",
+      "Façam uma batalha de elogios: perde quem demorar mais de cinco segundos.",
+      "Escolham uma palavra proibida durante a chamada; quem falar primeiro perde.",
+      "Joguem vinte perguntas para descobrir uma memória escolhida pelo outro.",
+      "Façam um quiz com cinco perguntas sobre gostos, manias e histórias do casal.",
+      "Cada um escolhe uma música e o outro precisa adivinhar por que ela foi escolhida.",
+      "Joguem pedra, papel e tesoura em melhor de cinco com uma prenda carinhosa.",
+      "Façam um bingo de coisas que costumam acontecer nas chamadas de vocês.",
+      "Criem três desafios secretos e escolham um número sem saber qual desafio virá.",
+      "Joguem 'eu nunca' com dez frases leves e inesperadas.",
+      "Façam uma caça ao tesouro: cada um pede três objetos para o outro encontrar.",
+      "Joguem uma rodada de perguntas em que só vale responder com outra pergunta.",
+      "Escolham um tema e disputem quem lembra mais itens em trinta segundos.",
+      "Façam um campeonato de caretas com três categorias e notas de zero a dez.",
+      "Joguem 'complete a frase' usando lembranças e planos do casal.",
+      "Cada um descreve uma foto antiga sem mostrar e o outro tenta adivinhar qual é.",
+      "Criem um jogo de pistas para o outro descobrir o lugar ideal do próximo encontro."
+    ],
+    twists: [
+      "O vencedor ganha o direito de escolher a próxima missão.",
+      "Quem perder precisa cumprir uma prenda romântica.",
+      "Façam tudo em no máximo cinco minutos.",
+      "Não vale repetir resposta nem pedir dica.",
+      "Incluam uma rodada bônus criada na hora.",
+      "Marquem os pontos e façam uma final em melhor de três.",
+      "O perdedor manda um áudio fazendo uma declaração dramática.",
+      "Cada resposta certa vale também um beijo para o próximo encontro.",
+      "Joguem por chamada com a câmera ligada.",
+      "Se empatar, decidam com uma pergunta surpresa."
+    ],
+    endings: [
+      "Anotem o placar para uma revanche futura.",
+      "O vencedor escolhe uma recompensa simples.",
+      "Terminem rindo da resposta mais inesperada.",
+      "Façam uma foto comemorando o resultado.",
+      "Prometam uma revanche quando estiverem juntos."
+    ]
   },
   {
-    type: "Foto",
-    title: "Um pedacinho do agora",
-    text: "Cada um manda uma foto do que está vendo agora e explica por que queria que o outro estivesse ali."
+    key: "fotos",
+    type: "Fotos e chamada",
+    titles: ["Foto do nada", "Mostra seu mundo", "Saudade em imagem", "Clique surpresa", "Em chamada", "Um detalhe seu", "Registro de hoje", "Câmera ligada", "Só para mim", "Presença à distância"],
+    prompts: [
+      "Mandem uma foto do que estão vendo exatamente agora, sem arrumar a cena.",
+      "Cada um envia uma selfie fazendo a expressão que melhor resume o dia.",
+      "Fotografem um detalhe da roupa de hoje e deixem o outro adivinhar o restante.",
+      "Mandem uma foto de um objeto que faz lembrar o outro e expliquem o motivo.",
+      "Façam uma chamada de cinco minutos apenas para se olhar e conversar sem pressa.",
+      "Cada um mostra pela câmera o cantinho favorito do quarto.",
+      "Recriem hoje a pose de uma foto antiga de vocês.",
+      "Mandem uma foto do sorriso mais espontâneo que conseguirem.",
+      "Escolham uma cor e fotografem três coisas dessa cor ao redor.",
+      "Façam uma mini sessão de fotos com três emoções escolhidas pelo outro.",
+      "Enviem uma foto do céu e comparem como ele está em cada lugar.",
+      "Mostrem pela câmera a roupa que usariam se fossem se encontrar agora.",
+      "Mandem uma foto sem mostrar o rosto e deixem o outro adivinhar o momento.",
+      "Façam uma chamada enquanto cada um prepara a mesma bebida ou lanche.",
+      "Cada um escolhe uma foto favorita do outro e conta por que gosta tanto dela.",
+      "Mandem uma sequência de três fotos contando uma pequena história do dia.",
+      "Façam uma foto usando algo que o outro já elogiou.",
+      "Mostrem em chamada uma lembrança guardada e contem a história por trás dela.",
+      "Mandem uma foto inesperada de um detalhe bonito: olhos, mãos, cabelo ou sorriso.",
+      "Façam uma captura combinada em chamada, posando como se estivessem lado a lado."
+    ],
+    twists: [
+      "Não vale usar foto antiga nem repetir a primeira tentativa.",
+      "A imagem precisa representar uma palavra escolhida pelo outro.",
+      "Façam com luz natural e sem filtro.",
+      "Incluam uma legenda de apenas três palavras.",
+      "O outro precisa responder com uma foto no mesmo tema.",
+      "Transformem a foto em uma pista para uma pergunta.",
+      "Façam tudo em até dois minutos.",
+      "Escolham juntos qual registro merece entrar no mural.",
+      "Não mostrem a foto imediatamente: deem três pistas antes.",
+      "Finalizem a troca com um áudio contando o que sentiram."
+    ],
+    endings: [
+      "Escolham qual foto ficou mais bonita e deem a ela um título só de vocês.",
+      "Escolham a imagem que mais matou a saudade.",
+      "Terminem marcando uma chamada mais longa.",
+      "Façam um elogio específico sobre a foto recebida.",
+      "Mandem mais uma foto completamente inesperada para fechar a sequência."
+    ]
   },
   {
-    type: "Planos",
-    title: "Nosso próximo encontro",
-    text: "Escolham uma coisa que querem fazer juntos no próximo encontro, mesmo que seja simples."
-  },
-  {
-    type: "Declaração",
-    title: "Três motivos de hoje",
-    text: "Cada um fala três motivos pelos quais escolheria o outro de novo hoje."
-  },
-  {
-    type: "Risada",
-    title: "Memória engraçada",
-    text: "Lembrem de uma conversa, print ou momento que fez vocês rirem muito, e revivam isso juntos."
-  },
-  {
-    type: "Cuidado",
-    title: "Pergunta sincera",
-    text: "Perguntem um ao outro: como eu posso cuidar melhor de você essa semana?"
-  },
-  {
-    type: "Saudade",
-    title: "Boa noite especial",
-    text: "Antes de dormir, mandem uma mensagem dizendo como queriam terminar o dia se estivessem juntinhos."
-  },
-  {
-    type: "Futuro",
-    title: "Uma cena nossa",
-    text: "Descrevam uma cena do futuro de vocês com detalhes: lugar, cheiro, música e o que vocês estariam fazendo."
-  },
-  {
-    type: "Jogo",
-    title: "Pergunta surpresa",
-    text: "Cada um faz uma pergunta que começa com: 'quando você percebeu que...?' e deixa a resposta virar conversa."
-  },
-  {
-    type: "Presença",
-    title: "Playlist em chamada",
-    text: "Escolham uma música da playlist, deem play juntos e fiquem conversando enquanto ela toca."
-  },
-  {
+    key: "picante",
     type: "Picante",
-    title: "Elogio proibido",
-    text: "Cada um manda uma mensagem dizendo uma coisa no outro que mexe com a cabeça e deixa vontade de chegar mais perto."
+    titles: ["Temperatura subindo", "Vontade de você", "Provocação", "Segredo quente", "Chega mais perto", "Saudade com desejo", "Só entre nós", "Clima de hoje", "Promessa provocante", "Quase sem limites"],
+    prompts: [
+      "Cada um descreve o beijo que mais gostaria de dar no outro agora.",
+      "Mandem um elogio provocante sobre uma parte do corpo ou um jeito do outro.",
+      "Contem qual roupa do outro mais desperta vontade e por quê.",
+      "Descrevam uma cena romântica e intensa que gostariam de viver no próximo encontro.",
+      "Façam uma lista de três carinhos que estão devendo um ao outro.",
+      "Mandem uma foto sensual e discreta de um detalhe escolhido por vocês.",
+      "Digam em um áudio o que fariam nos primeiros cinco minutos se estivessem juntos.",
+      "Cada um escolhe uma música que criaria o clima perfeito para o casal.",
+      "Brinquem de completar a frase: 'quando eu olho para você, tenho vontade de...'.",
+      "Contem qual foi o momento em que mais sentiram atração um pelo outro.",
+      "Escolham uma palavra secreta para avisar que estão com saudade e desejo.",
+      "Façam uma promessa provocante para cumprir no próximo encontro.",
+      "Descrevam lentamente um carinho que gostariam de receber.",
+      "Mandem uma selfie com o olhar mais sedutor que conseguirem.",
+      "Cada um revela uma fantasia romântica que ainda não contou.",
+      "Escolham juntos um lugar inesperado onde gostariam de trocar um beijo demorado.",
+      "Façam três perguntas de desejo que nunca tiveram coragem de fazer.",
+      "Digam qual cheiro, toque ou detalhe do outro mais fica na memória.",
+      "Criem um código de emojis para uma conversa mais quente durante o dia.",
+      "Planejem um encontro completo começando pelo clima, roupa, música e primeiro beijo."
+    ],
+    twists: [
+      "Façam por áudio, falando devagar e sem ensaiar.",
+      "Cada um tem direito a uma pergunta extra.",
+      "Comecem de forma romântica e aumentem a provocação aos poucos.",
+      "Usem apenas cinco frases para dizer tudo.",
+      "O outro pode escolher um detalhe para aprofundar.",
+      "Façam em chamada com as luzes mais baixas.",
+      "Transformem a resposta em uma promessa para depois.",
+      "Alternem uma frase de cada vez até criar a cena completa.",
+      "Incluam algo que já viveram e algo novo que desejam.",
+      "O outro escolhe uma palavra que precisa aparecer na resposta."
+    ],
+    endings: [
+      "Depois, cada um escolhe qual detalhe mais mexeu com a imaginação.",
+      "Continuem a provocação por mais cinco mensagens.",
+      "Quem deixar o outro com mais vontade escolhe a próxima missão.",
+      "Transformem a resposta em uma promessa ousada para o próximo encontro.",
+      "Finalizem com um áudio dizendo o que ainda ficou na vontade."
+    ]
   },
   {
-    type: "Picante",
-    title: "Verdade com desejo",
-    text: "Cada um responde: qual carinho, beijo ou detalhe do outro você mais fica imaginando quando bate saudade?"
-  },
-  {
-    type: "Picante",
-    title: "Foto misteriosa",
-    text: "Mandem uma foto discreta de um detalhe de vocês hoje: perfume, roupa, sorriso, cabelo ou qualquer coisa que provoque saudade."
-  },
-  {
-    type: "Picante",
-    title: "Promessa para depois",
-    text: "Cada um escreve uma promessa carinhosa e provocante para cumprir quando estiverem juntos de novo."
-  },
-  {
-    type: "Picante",
-    title: "Uma cena só nossa",
-    text: "Descrevam uma cena romântica e intensa que gostariam de viver juntos, sem pressa e com muito carinho."
-  },
-  {
-    type: "Picante",
-    title: "Escolha um carinho",
-    text: "Cada um escolhe um carinho que quer receber no próximo encontro e explica por que pensou nele."
+    key: "adulto",
+    type: "Adulto +18",
+    titles: ["Sem roupa e sem pressa", "Desejo explícito", "Chamada particular", "Verdade +18", "Só para adultos", "Fantasia liberada", "Noite quente", "Entre quatro paredes", "Sem censura", "Prazer a dois"],
+    prompts: [
+      "Peçam e troquem uma nude pensada especialmente para o outro.",
+      "Façam uma chamada íntima e conduzam um ao outro apenas com a voz, dizendo o que desejam ver e sentir.",
+      "Brinquem de verdade ou desafio +18 com três rodadas para cada um.",
+      "Cada um descreve, com detalhes, como gostaria de fazer amor com o outro no próximo encontro.",
+      "Escolham uma peça de roupa para tirar lentamente durante uma chamada privada.",
+      "Troquem uma sequência de três fotos: sensual, mais ousada e completamente nua.",
+      "Façam um striptease curto em chamada e caprichem na provocação.",
+      "Contem uma fantasia sexual e descrevam exatamente como gostariam de vivê-la.",
+      "Respondam qual posição, ritmo ou tipo de toque mais gostariam de experimentar juntos.",
+      "Digam exatamente onde e como gostariam de ser beijados ou tocados pelo outro.",
+      "Mandem um áudio explícito contando o que mais desejam fazer quando se encontrarem.",
+      "Criem um jogo de comandos íntimos e alternem quem manda em cada rodada.",
+      "Escolham um personagem ou cenário para uma interpretação adulta em chamada.",
+      "Compartilhem um momento de prazer individual em chamada e provoquem um ao outro com a voz.",
+      "Façam uma rodada de sexting com cinco mensagens cada, alternando quem conduz a história.",
+      "Troquem uma foto íntima do ângulo que o outro escolher.",
+      "Montem juntos uma lista de desejos dividida entre 'sim', 'talvez' e 'não'.",
+      "Planejem uma noite de sexo completa, incluindo roupa, clima, preliminares e a parte mais desejada.",
+      "Façam perguntas sobre posições, lugares e fantasias que ainda querem experimentar.",
+      "Conversem sobre o que ajuda cada um a relaxar, sentir prazer e se sentir cuidado depois da intimidade."
+    ],
+    twists: [
+      "Comecem com uma mensagem curta dizendo exatamente o que querem.",
+      "Façam com luz baixa e uma música escolhida para aumentar o clima.",
+      "Um escolhe o ritmo e o outro decide qual será o próximo comando.",
+      "Comecem devagar e aumentem a intensidade a cada nova rodada.",
+      "Façam tudo pela chamada e alternem uma provocação por vez.",
+      "Alternem quem conduz e deixem cada rodada mais ousada que a anterior.",
+      "Cada um diz qual parte mais gostou e pede uma continuação.",
+      "Usem um cronômetro de dez minutos e não mudem de assunto até ele terminar.",
+      "Incluam elogios explícitos no meio da provocação.",
+      "Terminem com uma última provocação escolhida pelo outro."
+    ],
+    endings: [
+      "Quem deixar o outro com mais vontade escolhe a próxima missão.",
+      "Transformem o final em uma promessa detalhada para o próximo encontro.",
+      "Depois mandem um áudio dizendo tudo o que ainda ficaram imaginando.",
+      "Aumentem o desafio com uma pergunta ainda mais ousada.",
+      "Finalizem escolhendo qual parte merece uma repetição mais demorada."
+    ]
   }
 ];
+
+function buildMissionPool() {
+  return missionBlueprints.flatMap((blueprint) =>
+    blueprint.prompts.flatMap((prompt, promptIndex) =>
+      blueprint.twists.flatMap((twist, twistIndex) =>
+        blueprint.endings.map((ending, endingIndex) => ({
+          id: `${blueprint.key}-${promptIndex}-${twistIndex}-${endingIndex}`,
+          level: blueprint.key,
+          type: blueprint.type,
+          title: blueprint.titles[(promptIndex + twistIndex + endingIndex) % blueprint.titles.length],
+          text: `${prompt} ${twist} ${ending}`
+        }))
+      )
+    )
+  );
+}
+
+const coupleMissions = buildMissionPool();
 
 function loadMissionHistory() {
   try {
@@ -962,7 +1166,7 @@ function loadMissionHistory() {
 }
 
 function saveMissionHistory(history) {
-  localStorage.setItem(MISSIONS_KEY, JSON.stringify(history.slice(0, 3)));
+  localStorage.setItem(MISSIONS_KEY, JSON.stringify(history.slice(0, 5)));
 }
 
 function renderMissionHistory() {
@@ -980,6 +1184,8 @@ function renderMissionHistory() {
 }
 
 function setMission(mission, save = true) {
+  const card = $(".mission-card");
+  card.dataset.missionId = mission.id || "";
   $("#missionType").textContent = mission.type;
   $("#missionTitle").textContent = mission.title;
   $("#missionText").textContent = mission.text;
@@ -987,28 +1193,53 @@ function setMission(mission, save = true) {
   const history = loadMissionHistory();
   saveMissionHistory([
     {
+      id: mission.id || "",
       title: mission.title,
       type: mission.type,
+      text: mission.text,
+      level: mission.level || "leve",
       date: new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
     },
-    ...history.filter((item) => item.title !== mission.title)
+    ...history.filter((item) => item.id ? item.id !== mission.id : item.title !== mission.title)
   ]);
   renderMissionHistory();
 }
 
+function dailyMissionIndex(poolLength) {
+  const today = new Date();
+  const key = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+  let hash = 2166136261;
+  for (let index = 0; index < key.length; index += 1) {
+    hash ^= key.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash) % poolLength;
+}
+
 function setupCoupleMissions() {
   const button = $("#missionButton");
+  const dailyButton = $("#dailyMissionButton");
   if (!button) return;
   renderMissionHistory();
   const history = loadMissionHistory();
-  const lastMission = history[0] && coupleMissions.find((mission) => mission.title === history[0].title);
+  const storedMission = history[0];
+  const refreshedMission = storedMission && coupleMissions.find((mission) =>
+    storedMission.id ? mission.id === storedMission.id : mission.title === storedMission.title
+  );
+  const lastMission = refreshedMission || (storedMission?.text && storedMission?.type ? storedMission : null);
   if (lastMission) setMission(lastMission, false);
+
   button.addEventListener("click", () => {
-    const currentTitle = $("#missionTitle").textContent;
-    const options = coupleMissions.filter((mission) => mission.title !== currentTitle);
+    const currentId = $(".mission-card").dataset.missionId;
+    const options = coupleMissions.filter((mission) => mission.id !== currentId);
     const mission = options[Math.floor(Math.random() * options.length)];
     setMission(mission);
     showToast("Missão do casal sorteada.");
+  });
+
+  dailyButton.addEventListener("click", () => {
+    setMission(coupleMissions[dailyMissionIndex(coupleMissions.length)]);
+    showToast("A missão de hoje foi revelada.");
   });
 }
 
